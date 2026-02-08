@@ -1,8 +1,9 @@
 # AD CS LOLBAS Toolkit
 
-Native Windows toolkit for AD CS enumeration and exploitation. Everything runs through built-in OS components (certreq.exe, certutil.exe, PowerShell AD module, .NET Framework) - no third-party tools needed.
+Native Windows toolkit for AD CS enumeration and exploitation. Everything runs through built-in OS components (certreq.exe, certutil.exe, PowerShell AD module, .NET Framework) - no third-party tools needed. Build with a sprinkle of FAFO and some finding out in lab env.
 
-Built for authorised security testing and education only.
+## Demo
+
 
 ## Requirements
 
