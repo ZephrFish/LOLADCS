@@ -481,3 +481,8 @@ Write-Host ""
 Write-Host "    # Cleanup (remove this credential)" -ForegroundColor DarkGray
 Write-Host "    .\Invoke-ShadowCredentials.ps1 -Target `"$Target`" -Action Remove -DeviceId `"$devGuid`"" -ForegroundColor White
 Write-Host ""
+Write-Host "  --- OPSEC WARNING ---" -ForegroundColor Yellow
+Write-Host "  Shadow credentials persist until explicitly removed." -ForegroundColor DarkGray
+Write-Host "  Always clean up after use to avoid detection by defenders." -ForegroundColor DarkGray
+Write-Host "  The credential above can be discovered via: -Action List" -ForegroundColor DarkGray
+Write-Host ""
