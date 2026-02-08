@@ -3,7 +3,8 @@
 Native Windows toolkit for AD CS enumeration and exploitation. Everything runs through built-in OS components (certreq.exe, certutil.exe, PowerShell AD module, .NET Framework) - no third-party tools needed. Build with a sprinkle of FAFO and some finding out in lab env.
 
 ## Demo
-[](2026-02-08_21-09-05.mp4)
+
+<video src="2026-02-08_21-09-05.mp4" width="320" height="240" controls></video>
 
 ## Requirements
 
