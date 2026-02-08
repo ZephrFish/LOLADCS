@@ -20,7 +20,9 @@
 [CmdletBinding()]
 param(
     [string]$OutputDir = "$env:TEMP\domain-recon",
-    [switch]$Quick
+    [switch]$Quick,
+    [int]$Delay = 0,
+    [ValidateRange(0,100)] [int]$Jitter = 50
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,9 +39,22 @@ function Log {
     [void]$report.AppendLine($Msg -replace '\x1b\[[0-9;]*m','')
 }
 
+function Invoke-StageDelay {
+    if ($Delay -le 0) { return }
+    $range = [int]($Delay * $Jitter / 100)
+    $actual = $Delay + (Get-Random -Minimum (-$range) -Maximum ($range + 1))
+    if ($actual -gt 0) {
+        Write-Host "    [i] OPSEC delay: ${actual}ms" -ForegroundColor DarkGray
+        Start-Sleep -Milliseconds $actual
+    }
+}
+
 Write-Host ""
 Write-Host "  Domain Reconnaissance - Native LOLBAS" -ForegroundColor White
 Write-Host "  ----------------------------------------" -ForegroundColor DarkGray
+if ($Delay -gt 0) {
+    Write-Host "  [i] OPSEC mode: ${Delay}ms delay (+/- ${Jitter}%) between stages" -ForegroundColor DarkGray
+}
 Write-Host ""
 
 $ctx = Get-ADContext
@@ -67,6 +82,7 @@ Get-ADDomainController -Filter * | ForEach-Object {
     Log "      $($_.Name) ($($_.IPv4Address)) - $($_.OperatingSystem)"
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  2. PASSWORD POLICY
@@ -95,6 +111,7 @@ if ($fgpps) {
     }
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  3. PRIVILEGED ACCOUNTS
@@ -126,6 +143,7 @@ Log "    AdminCount=1 users: $adminCount"
 $maq = (Get-ADObject -Identity $ctx.DomainDN -Properties 'ms-DS-MachineAccountQuota').'ms-DS-MachineAccountQuota'
 Log "    Machine Account Quota: $maq"
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  4. KERBEROS TARGETS
@@ -152,6 +170,7 @@ foreach ($a in $asrepUsers) {
     Log "      $($a.SamAccountName)"
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  5. DELEGATION
@@ -178,6 +197,7 @@ $rbcd = Get-ADObject -Filter {msDS-AllowedToActOnBehalfOfOtherIdentity -ne "$nul
 Log "    RBCD Configured: $($rbcd.Count)"
 foreach ($r in $rbcd) { Log "      $($r.sAMAccountName)" }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  6. TRUSTS
@@ -198,6 +218,7 @@ if ($trusts) {
     Log "    No domain trusts found"
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  7. GPOs
@@ -221,6 +242,7 @@ try {
     Log "    GPO enumeration failed: $($_.Exception.Message)" 'Yellow'
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  8. INTERESTING ACCOUNTS
@@ -258,6 +280,7 @@ if ($gmsas) {
     foreach ($g in $gmsas) { Log "      $($g.SamAccountName)" }
 }
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  9. COMPUTERS
@@ -288,6 +311,7 @@ $lapsV2Count = (Get-ADComputer -Filter {msLAPS-Password -ne "$null"} -ErrorActio
 Log "    LAPS v1 deployed: $lapsCount"
 Log "    LAPS v2 deployed: $lapsV2Count"
 Log ""
+Invoke-StageDelay
 
 # ============================================================
 #  10. AD CS (Certificate Services)
