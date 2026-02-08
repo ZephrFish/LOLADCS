@@ -4,7 +4,7 @@ Native Windows toolkit for AD CS enumeration and exploitation. Everything runs t
 
 ## Demo
 
-<video src="2026-02-08_21-09-05.mp4" width="320" height="240" controls></video>
+<video src="./2026-02-08_21-09-05.mp4" width="320" height="240" controls></video>
 
 ## Requirements
 
