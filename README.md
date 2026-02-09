@@ -6,12 +6,33 @@ Built for authorised security testing and education only.
 
 ## Requirements
 
-- Windows domain-joined machine
+- Windows domain-joined machine (for live enumeration/exploitation)
 - PowerShell 5.1+
-- RSAT AD PowerShell module (`Install-WindowsFeature RSAT-AD-PowerShell` on Server, or `Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0` on Win10/11)
+- RSAT AD PowerShell module (`Install-WindowsFeature RSAT-AD-PowerShell` on Server, or `Add-WindowsCapability -Online -Name Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0` on Win10/11) - not required for snapshot or remote modes
 - Domain user context (most scripts work with standard user privileges)
+- Snapshot audit (`Invoke-SnapshotAudit.ps1`) works fully offline with no domain connectivity or RSAT
 
-All ESC scripts and utilities dot-source `adcs-common.ps1` for shared helpers (cert requests, auth, UI). Keep it in the same directory.
+All ESC scripts and utilities dot-source `adcs-common.ps1` for shared helpers (cert requests, auth, UI). Keep it in the same directory as the other scripts.
+
+## Layout
+
+```
+LOLADCS/
+  README.md
+  scripts/
+    adcs-common.ps1
+    Invoke-Enumerate.ps1
+    Invoke-SnapshotAudit.ps1
+    Invoke-RemoteAudit.ps1
+    Invoke-ESC1.ps1 .. Invoke-ESC13.ps1
+    Invoke-FindTemplates.ps1
+    Invoke-PassTheCert.ps1
+    Invoke-ShadowCredentials.ps1
+    Invoke-Kerberoast.ps1
+    Invoke-DomainRecon.ps1
+```
+
+Run everything from inside the `scripts/` directory.
 
 ## Scripts
 
@@ -23,6 +44,34 @@ All ESC scripts and utilities dot-source `adcs-common.ps1` for shared helpers (c
 .\Invoke-Enumerate.ps1
 .\Invoke-Enumerate.ps1 -SkipHTTP          # skip ESC8 HTTP probes (quieter)
 ```
+
+**Invoke-SnapshotAudit.ps1** - Offline AD CS audit against ADExplorer `.dat` snapshots. Parses the binary snapshot format directly (no external dependencies, no domain connectivity). Checks for ESC1, ESC2, ESC3, ESC4, ESC9, and ESC13. Enumerates high-value target groups (Domain Admins, Enterprise Admins, etc.) and generates ready-to-run `Invoke-ESC*` commands.
+
+```powershell
+# Full audit
+.\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat
+
+# Vulnerable templates only
+.\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -VulnerableOnly
+
+# Interactive mode - pick a target from discovered Domain Admins
+.\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -List
+
+# Specify target user for commands
+.\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -Target administrator
+
+# Export to files
+.\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -OutputFile report.txt -CsvFile results.csv
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `-SnapshotPath` | Path to ADExplorer `.dat` snapshot file |
+| `-VulnerableOnly` | Only show templates with ESC findings |
+| `-List` | Interactive target picker - shows HVT members, prompts to select one |
+| `-Target` | Specify target user for exploitation commands |
+| `-OutputFile` | Save full report as text file |
+| `-CsvFile` | Export structured results as CSV |
 
 **Invoke-FindTemplates.ps1** - Lists certificate templates with enrolment permissions, EKUs, and vulnerability flags.
 
@@ -194,10 +243,14 @@ Artifacts are written to `%TEMP%\adcs-ops\` by default. Clean up after yourself.
 
 ## File Reference
 
+All scripts live in `scripts/`.
+
 | File | Purpose |
 |------|---------|
 | `adcs-common.ps1` | Shared helpers - dot-sourced by all other scripts |
 | `Invoke-Enumerate.ps1` | ESC1-13 vulnerability scanner |
+| `Invoke-SnapshotAudit.ps1` | Offline ADExplorer snapshot audit (ESC1-4, 9, 13) |
+| `Invoke-RemoteAudit.ps1` | Remote LDAP audit (no RSAT needed) |
 | `Invoke-FindTemplates.ps1` | Template discovery and filtering |
 | `Invoke-DomainRecon.ps1` | Comprehensive domain reconnaissance |
 | `Invoke-ESC[1-13].ps1` | Individual ESC exploitation scripts |
