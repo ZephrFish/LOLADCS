@@ -255,3 +255,7 @@ All scripts live in `scripts/`.
 | `Invoke-PassTheCert.ps1` | Certificate-based LDAP auth + interactive shell |
 | `Invoke-ShadowCredentials.ps1` | Shadow credentials (standalone, no cert needed) |
 | `Invoke-Kerberoast.ps1` | Native TGS ticket extraction |
+
+
+## Note
+Written to accompany my [Malwareless Adversarial Emulation](https://lms.zsec.red) course and walk through the motions of using exclusively powershell for AD CS attacks.
