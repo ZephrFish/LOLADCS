@@ -7,8 +7,7 @@
     an external relay setup and authentication coercion.
 .EXAMPLE
     .\Invoke-ESC8.ps1
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

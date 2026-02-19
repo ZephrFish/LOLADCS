@@ -14,8 +14,7 @@
     .\Invoke-ESC1.ps1 -CAConfig "polaris.zsec.red\corp-CA" -TemplateName "VulnTemplate" -TargetUPN "administrator@zsec.red"
 .EXAMPLE
     .\Invoke-ESC1.ps1 -CAConfig "polaris.zsec.red\corp-CA" -TemplateName "VulnTemplate" -TargetUPN "administrator@zsec.red" -AuthMethod Schannel -SkipCleanup
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

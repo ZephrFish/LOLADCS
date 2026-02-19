@@ -6,7 +6,6 @@
     AD context, cert request pipeline, Schannel/PKINIT auth, UI functions.
 .NOTES
     Usage: . "$PSScriptRoot\adcs-common.ps1"
-    For authorised security testing and educational purposes only.
 #>
 
 # ============================================================================

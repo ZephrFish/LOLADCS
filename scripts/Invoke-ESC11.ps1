@@ -7,8 +7,7 @@
     Enumeration only - relay requires an external setup.
 .EXAMPLE
     .\Invoke-ESC11.ps1
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

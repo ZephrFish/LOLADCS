@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
     Shadow Credentials Attack - Native LOLBAS (Standalone).
+    [Warning] Work In Progress
 .DESCRIPTION
     Adds, lists, or removes shadow credentials (msDS-KeyCredentialLink) on AD
     objects using only native Windows components. Generates RSA key pairs,
@@ -30,8 +31,7 @@
     .\Invoke-ShadowCredentials.ps1 -Target "POLARIS$" -Action Remove -DeviceId "a1b2c3d4-..."
 .EXAMPLE
     .\Invoke-ShadowCredentials.ps1 -Target "administrator" -Action Add -DCTarget polaris.zsec.red
-.NOTES
-    For authorised security testing and educational purposes only.
+
     Requires: Windows 10/Server 2016+ (New-SelfSignedCertificate), write access
     to msDS-KeyCredentialLink on the target object, and PKINIT-capable domain.
 #>

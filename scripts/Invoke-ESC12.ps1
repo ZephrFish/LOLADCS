@@ -8,8 +8,7 @@
     Must be run on the CA server itself.
 .EXAMPLE
     .\Invoke-ESC12.ps1
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

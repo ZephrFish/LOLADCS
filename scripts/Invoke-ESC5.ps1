@@ -6,8 +6,7 @@
     Enrollment Services, OID container). Identifies writable objects for the current user.
 .EXAMPLE
     .\Invoke-ESC5.ps1
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

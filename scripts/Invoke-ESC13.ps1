@@ -11,8 +11,7 @@
     Template with issuance policy OID linked to a group
 .EXAMPLE
     .\Invoke-ESC13.ps1 -CAConfig "polaris.zsec.red\corp-CA" -TemplateName "PolicyLinkedTemplate"
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

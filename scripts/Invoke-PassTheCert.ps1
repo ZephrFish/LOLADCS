@@ -39,8 +39,7 @@
     .\Invoke-PassTheCert.ps1 -PFXFile esc1.pfx -PFXPassword "pass" -Action ShadowCred -TargetDN "POLARIS$" -DCTarget polaris.zsec.red
 .EXAMPLE
     .\Invoke-PassTheCert.ps1 -PFXFile esc1.pfx -PFXPassword "pass" -Action LdapShell -DCTarget polaris.zsec.red
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

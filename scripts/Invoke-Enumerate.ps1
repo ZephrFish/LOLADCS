@@ -37,8 +37,7 @@
 .EXAMPLE
     .\Invoke-Enumerate.ps1 -Snapshot .\snapshot.dat
     Offline analysis of an ADExplorer snapshot.
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

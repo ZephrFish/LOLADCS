@@ -14,8 +14,7 @@
     UPN of the user to impersonate
 .EXAMPLE
     .\Invoke-ESC3.ps1 -CAConfig "polaris.zsec.red\corp-CA" -AgentTemplate "EnrollmentAgent" -TargetTemplate "User" -TargetUPN "administrator@zsec.red"
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

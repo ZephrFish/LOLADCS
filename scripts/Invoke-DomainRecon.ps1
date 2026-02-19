@@ -13,8 +13,7 @@
     .\Invoke-DomainRecon.ps1
 .EXAMPLE
     .\Invoke-DomainRecon.ps1 -Quick
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

@@ -24,8 +24,7 @@
     .\Invoke-RemoteAudit.ps1 -Server 10.0.0.5 -Credential $cred
 .EXAMPLE
     .\Invoke-RemoteAudit.ps1 -Server dc01.corp.local -UseSSL -VulnerableOnly
-.NOTES
-    For authorised security testing and educational purposes only.
+
     Works from any Windows machine - no domain join or RSAT required.
 #>
 

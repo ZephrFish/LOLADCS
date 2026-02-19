@@ -10,8 +10,7 @@
     Vulnerable certificate template name
 .EXAMPLE
     .\Invoke-ESC2.ps1 -CAConfig "polaris.zsec.red\corp-CA" -TemplateName "AnyPurposeTemplate"
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

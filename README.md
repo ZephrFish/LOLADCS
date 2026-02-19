@@ -217,15 +217,6 @@ LdapShell commands include: `user`, `group`, `computer`, `admins`, `das`, `eas`,
 .\Invoke-ShadowCredentials.ps1 -Target "DC01$" -Action Clear
 ```
 
-**Invoke-Kerberoast.ps1** - Native Kerberoast via `System.IdentityModel`. Discovers kerberoastable accounts and requests TGS tickets. Outputs in hashcat format.
-
-```powershell
-.\Invoke-Kerberoast.ps1
-.\Invoke-Kerberoast.ps1 -AdminOnly
-.\Invoke-Kerberoast.ps1 -Target "MSSQLSvc/db01.zsec.red:1433"
-.\Invoke-Kerberoast.ps1 -Delay 2000 -Jitter 50     # 2s +/- 50% between requests
-```
-
 ## OPSEC Notes
 
 Several scripts support options to reduce detection footprint:
@@ -258,4 +249,4 @@ All scripts live in `scripts/`.
 
 
 ## Note
-Written to accompany my [Malwareless Adversarial Emulation](https://lms.zsec.red) course and walk through the motions of using exclusively powershell for AD CS attacks.
+Written to accompany my [Malwareless Adversarial Emulation](https://lms.zsec.red/testimonials) course and walk through the motions of using exclusively powershell for AD CS attacks.

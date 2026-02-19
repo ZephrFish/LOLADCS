@@ -32,8 +32,7 @@
 .EXAMPLE
     .\Invoke-FindTemplates.ps1 -CAConfig "polaris.zsec.red\corp-CA" -Enrollable
     Shows enrollable templates published on a specific CA.
-.NOTES
-    For authorised security testing and educational purposes only.
+
 #>
 
 [CmdletBinding()]

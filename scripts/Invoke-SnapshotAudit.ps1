@@ -32,8 +32,7 @@
     .\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -List
 .EXAMPLE
     .\Invoke-SnapshotAudit.ps1 -SnapshotPath .\snapshot.dat -Target jsmith
-.NOTES
-    For authorised security testing and educational purposes only.
+
     Requires no domain connectivity - works entirely offline against snapshot files.
 #>
 
