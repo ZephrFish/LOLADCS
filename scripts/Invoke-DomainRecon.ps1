@@ -358,13 +358,13 @@ Write-Host ""
 # Quick wins summary
 Write-Host "  --- Quick Wins ---" -ForegroundColor Yellow
 if ($kerbUsers.Count -gt 0) {
-    Write-Host "  [!] $($kerbUsers.Count) kerberoastable accounts - run .\Invoke-Kerberoast.ps1" -ForegroundColor Red
+    Write-Host "  [!] $($kerbUsers.Count) potentially kerberoastable accounts" -ForegroundColor Red
 }
 if ($asrepUsers.Count -gt 0) {
-    Write-Host "  [!] $($asrepUsers.Count) AS-REP roastable accounts" -ForegroundColor Red
+    Write-Host "  [!] $($asrepUsers.Count) potentially AS-REP roastable accounts" -ForegroundColor Red
 }
 if ($unconst.Count -gt 0) {
-    Write-Host "  [!] $($unconst.Count) unconstrained delegation hosts (non-DC)" -ForegroundColor Red
+    Write-Host "  [!] $($unconst.Count) potentially unconstrained delegation hosts (non-DC)" -ForegroundColor Red
 }
 if ($maq -gt 0) {
     Write-Host "  [!] MAQ=$maq - machine account creation possible" -ForegroundColor Yellow

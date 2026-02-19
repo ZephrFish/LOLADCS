@@ -26,7 +26,6 @@ LOLADCS/
     Invoke-FindTemplates.ps1
     Invoke-PassTheCert.ps1
     Invoke-ShadowCredentials.ps1
-    Invoke-Kerberoast.ps1
     Invoke-DomainRecon.ps1
 ```
 
@@ -221,7 +220,7 @@ LdapShell commands include: `user`, `group`, `computer`, `admins`, `das`, `eas`,
 
 Several scripts support options to reduce detection footprint:
 
-- **`-Delay` / `-Jitter`** on Kerberoast and DomainRecon adds random sleep between operations to avoid rate-based detection (MDI, etc.)
+- **`-Delay` / `-Jitter`** on DomainRecon adds random sleep between operations to avoid rate-based detection (MDI, etc.)
 - **`delay` command** in LdapShell does the same for interactive queries
 - **`-SkipHTTP`** on Enumerate avoids network connections to CA web endpoints
 - **`cleanup`** in LdapShell removes temp artifacts from `%TEMP%` (PFX files, hashes, reports)
@@ -245,7 +244,6 @@ All scripts live in `scripts/`.
 | `Invoke-ESC[1-13].ps1` | Individual ESC exploitation scripts |
 | `Invoke-PassTheCert.ps1` | Certificate-based LDAP auth + interactive shell |
 | `Invoke-ShadowCredentials.ps1` | Shadow credentials (standalone, no cert needed) |
-| `Invoke-Kerberoast.ps1` | Native TGS ticket extraction |
 
 
 ## Note
