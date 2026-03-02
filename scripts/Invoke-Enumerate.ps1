@@ -1,4 +1,4 @@
-<#
+ <#
 .SYNOPSIS
     AD CS Enumeration - Scan for all ESC1-ESC13 conditions.
 .DESCRIPTION
@@ -217,8 +217,8 @@ function Get-RawSDEnrollPrincipals {
 function Test-TemplateVulns {
     param(
         [string]$Name,
-        [uint32]$NameFlag,
-        [uint32]$EnrollFlag,
+        [int64]$NameFlag,
+        [int64]$EnrollFlag,
         [int]$RASignature,
         [string[]]$EKUs,
         [string[]]$CertPolicy,
@@ -419,8 +419,8 @@ if ($Mode -eq 'Local') {
         if ($t.SD) { try { $b = [byte[]]::new($t.SD.GetSecurityDescriptorBinaryForm().Length); $t.SD.GetSecurityDescriptorBinaryForm($b,0); $sdBytes=$b } catch {} }
 
         $result = Test-TemplateVulns -Name $t.Name `
-            -NameFlag ([uint32]($t.NameFlag -band 0xFFFFFFFF)) `
-            -EnrollFlag ([uint32]($t.EnrollFlag -band 0xFFFFFFFF)) `
+            -NameFlag ([int64]$t.NameFlag -band [int64]0xFFFFFFFF) `
+            -EnrollFlag ([int64]$t.EnrollFlag -band [int64]0xFFFFFFFF) `
             -RASignature ([int]$(if($null -eq $t.RASignature){0}else{$t.RASignature})) `
             -EKUs @(if($t.EKUs){$t.EKUs}else{@()}) `
             -CertPolicy @(if($t.CertPolicy){$t.CertPolicy}else{@()}) `
@@ -653,8 +653,8 @@ elseif ($Mode -eq 'Remote') {
             $sd = Get-LP $r 'ntsecuritydescriptor' -Single
 
             $result = Test-TemplateVulns -Name $tName `
-                -NameFlag ([uint32]$(if($null -ne $nf){$nf}else{0})) `
-                -EnrollFlag ([uint32]$(if($null -ne $ef){$ef}else{0})) `
+                -NameFlag $(if($null -ne $nf){[int64]$nf -band [int64]0xFFFFFFFF}else{0}) `
+                -EnrollFlag $(if($null -ne $ef){[int64]$ef -band [int64]0xFFFFFFFF}else{0}) `
                 -RASignature ([int]$(if($null -ne $rs){$rs}else{0})) `
                 -EKUs @(if($ek){$ek|ForEach-Object{$_.ToString()}}else{@()}) `
                 -CertPolicy @(if($cp){$cp|ForEach-Object{$_.ToString()}}else{@()}) `
@@ -957,3 +957,4 @@ if ($OutputFile) {
     Out-Line "  [+] Report saved to: $OutputFile" 'Green'
     Out-Line ""
 }
+ 
