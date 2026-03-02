@@ -1,4 +1,4 @@
-<#
+ <#
 .SYNOPSIS
     AD CS Remote Audit - Enumerate vulnerable AD CS templates from a non-domain-joined machine.
 .DESCRIPTION
@@ -424,8 +424,8 @@ try {
         $certTemplates.Add(@{
             Name          = if ($tplName)    { $tplName.ToString() }    else { '' }
             DisplayName   = if ($tplDisplay) { $tplDisplay.ToString() } else { '' }
-            NameFlag      = if ($null -ne $nameFlag)   { [uint32]$nameFlag }   else { 0 }
-            EnrollFlag    = if ($null -ne $enrollFlag)  { [uint32]$enrollFlag } else { 0 }
+            NameFlag      = if ($null -ne $nameFlag)   { [uint32]([int64]$nameFlag -band [int64]0xFFFFFFFF) }   else { 0 }
+            EnrollFlag    = if ($null -ne $enrollFlag)  { [uint32]([int64]$enrollFlag -band [int64]0xFFFFFFFF) } else { 0 }
             RASignature   = if ($null -ne $raSig)       { [int]$raSig }         else { 0 }
             SchemaVersion = if ($null -ne $schemaVer)   { [int]$schemaVer }     else { 0 }
             EKUs          = if ($ekuRaw)     { @($ekuRaw | ForEach-Object { $_.ToString() }) } else { @() }
@@ -625,3 +625,4 @@ if ($OutputFile) {
     Write-Host "  [+] Report saved to: $OutputFile" -ForegroundColor Green
     Write-Host ""
 }
+ 
